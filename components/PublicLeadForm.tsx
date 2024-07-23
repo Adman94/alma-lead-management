@@ -139,9 +139,16 @@ export default function PublicLeadForm() {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="usa">United States</SelectItem>
-                  <SelectItem value="canada">Canada</SelectItem>
-                  <SelectItem value="mexico">Mexico</SelectItem>
+                  <SelectItem value="United States">United States</SelectItem>
+                  <SelectItem value="Canada">Canada</SelectItem>
+                  <SelectItem value="Mexico">Mexico</SelectItem>
+                  <SelectItem value="Argentina">Argentina</SelectItem>
+                  <SelectItem value="South Korea">South Korea</SelectItem>
+                  <SelectItem value="India">India</SelectItem>
+                  <SelectItem value="France">France</SelectItem>
+                  <SelectItem value="Russia">Russia</SelectItem>
+                  <SelectItem value="United Kingdom">United Kingdom</SelectItem>
+                  <SelectItem value="Australia">Australia</SelectItem>
                   {/* Add more countries as needed */}
                 </SelectContent>
               </Select>
