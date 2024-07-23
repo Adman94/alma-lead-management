@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { useForm } from "react-hook-form"
+import { useForm, ControllerRenderProps, FieldValues } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import React from 'react'
@@ -15,11 +15,13 @@ const formSchema = z.object({
   password: z.string().min(1, "Password is required"),
 })
 
+type FormValues = z.infer<typeof formSchema>;
+
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       username: "",
@@ -27,7 +29,7 @@ export default function LoginPage() {
     },
   })
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: FormValues) {
     try {
       const response = await fetch('/api/auth', {
         method: 'POST',
@@ -58,7 +60,7 @@ export default function LoginPage() {
             <FormField
               control={form.control}
               name="username"
-              render={({ field }) => (
+              render={({ field }: { field: ControllerRenderProps<FormValues, 'username'> }) => (
                 <FormItem>
                   <FormLabel>Username</FormLabel>
                   <FormControl>
@@ -71,7 +73,7 @@ export default function LoginPage() {
             <FormField
               control={form.control}
               name="password"
-              render={({ field }) => (
+              render={({ field }: { field: ControllerRenderProps<FormValues, 'password'> }) => (
                 <FormItem>
                   <FormLabel>Password</FormLabel>
                   <FormControl>

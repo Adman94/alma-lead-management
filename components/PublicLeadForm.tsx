@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { ChangeEvent, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm } from "react-hook-form"
+import { useForm, ControllerRenderProps } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
@@ -24,11 +24,13 @@ const formSchema = z.object({
   resume: z.any().optional(),
 })
 
+type FormValues = z.infer<typeof formSchema>;
+
 export default function PublicLeadForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       firstName: "",
@@ -41,7 +43,7 @@ export default function PublicLeadForm() {
     },
   })
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: FormValues) {
     console.log("Form submitted with values:", values)
     setIsSubmitting(true)
     try {
@@ -88,7 +90,7 @@ export default function PublicLeadForm() {
         <FormField
           control={form.control}
           name="firstName"
-          render={({ field }) => (
+          render={({ field }: { field: ControllerRenderProps<FormValues, 'firstName'> }) => (
             <FormItem>
               <FormLabel>First Name</FormLabel>
               <FormControl>
@@ -101,7 +103,7 @@ export default function PublicLeadForm() {
         <FormField
           control={form.control}
           name="lastName"
-          render={({ field }) => (
+          render={({ field }: { field: ControllerRenderProps<FormValues, 'lastName'> }) => (
             <FormItem>
               <FormLabel>Last Name</FormLabel>
               <FormControl>
@@ -114,7 +116,7 @@ export default function PublicLeadForm() {
         <FormField
           control={form.control}
           name="email"
-          render={({ field }) => (
+          render={({ field }: { field: ControllerRenderProps<FormValues, 'email'> }) => (
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
@@ -127,7 +129,7 @@ export default function PublicLeadForm() {
         <FormField
           control={form.control}
           name="countryOfCitizenship"
-          render={({ field }) => (
+          render={({ field }: { field: ControllerRenderProps<FormValues, 'countryOfCitizenship'> }) => (
             <FormItem>
               <FormLabel>Country of Citizenship</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -137,9 +139,9 @@ export default function PublicLeadForm() {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="United States">United States</SelectItem>
-                  <SelectItem value="Canada">Canada</SelectItem>
-                  <SelectItem value="Mexico">Mexico</SelectItem>
+                  <SelectItem value="usa">United States</SelectItem>
+                  <SelectItem value="canada">Canada</SelectItem>
+                  <SelectItem value="mexico">Mexico</SelectItem>
                   {/* Add more countries as needed */}
                 </SelectContent>
               </Select>
@@ -150,7 +152,7 @@ export default function PublicLeadForm() {
         <FormField
           control={form.control}
           name="linkedinUrl"
-          render={({ field }) => (
+          render={({ field }: { field: ControllerRenderProps<FormValues, 'linkedinUrl'> }) => (
             <FormItem>
               <FormLabel>LinkedIn URL (Optional)</FormLabel>
               <FormControl>
@@ -165,20 +167,20 @@ export default function PublicLeadForm() {
           name="visaCategories"
           render={() => (
             <FormItem>
-              <FormLabel>Visa Categories of interest?</FormLabel>
+              <FormLabel>Visa Categories</FormLabel>
               <div className="space-y-2">
                 {['O-1', 'EB-1A', 'EB-2 NIW', 'I don\'t know'].map((category) => (
                   <FormField
                     key={category}
                     control={form.control}
                     name="visaCategories"
-                    render={({ field }) => {
+                    render={({ field }: { field: ControllerRenderProps<FormValues, 'visaCategories'> }) => {
                       return (
                         <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                           <FormControl>
                             <Checkbox
                               checked={field.value?.includes(category)}
-                              onCheckedChange={(checked) => {
+                              onCheckedChange={(checked: boolean) => {
                                 return checked
                                   ? field.onChange([...field.value, category])
                                   : field.onChange(
@@ -205,7 +207,7 @@ export default function PublicLeadForm() {
         <FormField
           control={form.control}
           name="helpDescription"
-          render={({ field }) => (
+          render={({ field }: { field: ControllerRenderProps<FormValues, 'helpDescription'> }) => (
             <FormItem>
               <FormLabel>How can we help you?</FormLabel>
               <FormControl>
@@ -221,14 +223,14 @@ export default function PublicLeadForm() {
         <FormField
           control={form.control}
           name="resume"
-          render={({ field }) => (
+          render={({ field }: { field: ControllerRenderProps<FormValues, 'resume'> }) => (
             <FormItem>
               <FormLabel>Resume (Optional)</FormLabel>
               <FormControl>
                 <Input 
                   type="file" 
                   accept=".pdf,.doc,.docx" 
-                  onChange={(e) => field.onChange(e.target.files)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => field.onChange(e.target.files)}
                 />
               </FormControl>
               <FormDescription>Upload your resume (PDF, DOC, or DOCX format, max 5MB)</FormDescription>

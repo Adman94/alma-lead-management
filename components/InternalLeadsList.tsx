@@ -1,27 +1,17 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, ChangeEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
+import type { Lead } from '@/lib/leadsStore'
 import React from 'react'
 
-interface Lead {
-  id: string
-  firstName: string
-  lastName: string
-  email: string
-  countryOfCitizenship: string
-  visaCategories: string[]
-  status: 'PENDING' | 'REACHED_OUT'
-  submittedAt: string
-}
-
 export default function InternalLeadsList() {
-  const [leads, setLeads] = useState<Lead[]>([])
-  const [filteredLeads, setFilteredLeads] = useState<Lead[]>([])
+  const [leads, setLeads] = useState<typeof Lead[]>([])
+  const [filteredLeads, setFilteredLeads] = useState<typeof Lead[]>([])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [currentPage, setCurrentPage] = useState(1)
@@ -53,14 +43,16 @@ export default function InternalLeadsList() {
   function filterLeads() {
     let filtered = leads
     if (search) {
-      filtered = filtered.filter(lead => 
-        `${lead.firstName} ${lead.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
-        lead.email.toLowerCase().includes(search.toLowerCase()) ||
-        lead.countryOfCitizenship.toLowerCase().includes(search.toLowerCase())
+      const searchLower = search.toLowerCase()
+      filtered = filtered.filter((lead: typeof Lead) => 
+        lead.firstName.toLowerCase().includes(searchLower) ||
+        lead.lastName.toLowerCase().includes(searchLower) ||
+        lead.email.toLowerCase().includes(searchLower) ||
+        lead.countryOfCitizenship.toLowerCase().includes(searchLower)
       )
     }
     if (statusFilter !== 'ALL') {
-      filtered = filtered.filter(lead => lead.status === statusFilter)
+      filtered = filtered.filter((lead: typeof Lead) => lead.status === statusFilter)
     }
     setFilteredLeads(filtered)
   }
@@ -76,10 +68,7 @@ export default function InternalLeadsList() {
       })
 
       if (response.ok) {
-        const updatedLead = await response.json()
-        setLeads(prevLeads => prevLeads.map(lead => 
-          lead.id === id ? updatedLead : lead
-        ))
+        fetchLeads()
       } else {
         console.error('Failed to update lead status')
       }
@@ -102,7 +91,7 @@ export default function InternalLeadsList() {
         <Input
           placeholder="Search"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
           className="max-w-sm"
         />
         <Select value={statusFilter} onValueChange={setStatusFilter}>

@@ -2,16 +2,8 @@
 
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { addLead, getLeads, Lead } from '@/lib/leadsStore'
-
-type Lead = {
-  id: string;
-  firstName: string;
-  lastName: string;
-  status: string;
-  submittedAt: string;
-  resumeFilename: File;
-}
+import { addLead, getLeads } from '@/lib/leadsStore'
+import type { Lead } from '@/lib/leadsStore'
 
 const leadSchema = z.object({
   firstName: z.string().min(2),
@@ -21,7 +13,6 @@ const leadSchema = z.object({
   linkedinUrl: z.string().url().optional().or(z.literal('')),
   visaCategories: z.array(z.string()),
   helpDescription: z.string().min(10),
-  // resume is handled separately
 })
 
 export async function POST(request: Request) {
@@ -33,26 +24,20 @@ export async function POST(request: Request) {
 
     const body: Record<string, FormDataEntryValue> = Object.fromEntries(formData);
 
-    // Handle resume file
     const resumeFile = body.resume as Blob | null;
     const resumeFilename = resumeFile ? (resumeFile as any).name : null;
 
-    // Parse visaCategories from JSON string
     const visaCategoriesString = body.visaCategories as string;
-    console.log("visaCategoriesString:", visaCategoriesString);
     const visaCategories = JSON.parse(visaCategoriesString);
-    console.log("Parsed visaCategories:", visaCategories);
 
     const dataToValidate = {
       ...body,
       visaCategories,
     };
-    console.log("Data to validate:", dataToValidate);
 
     const validatedData = leadSchema.parse(dataToValidate);
-    console.log("Validated data:", validatedData);
 
-    const newLead: Lead = {
+    const newLead: typeof Lead = {
       ...validatedData,
       id: Date.now().toString(),
       status: 'PENDING',
@@ -63,16 +48,13 @@ export async function POST(request: Request) {
     addLead(newLead);
 
     console.log("New lead added:", newLead);
+    console.log("Total leads:", getLeads().length);
 
     return NextResponse.json({ message: 'Lead created successfully', lead: newLead }, { status: 201 })
   } catch (error) {
     console.error("Error processing lead submission:", error);
     if (error instanceof z.ZodError) {
-      console.error("Zod validation error:", error.errors);
       return NextResponse.json({ errors: error.errors }, { status: 400 })
-    }
-    if (error instanceof Error) {
-      console.error("Error details:", error.message, error.stack);
     }
     return NextResponse.json({ error: 'An unexpected error occurred', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 })
   }
@@ -86,9 +68,11 @@ export async function GET(request: Request) {
 
   let filteredLeads = getLeads()
 
+  console.log("Total leads before filtering:", filteredLeads.length);
+
   if (search) {
     const searchLower = search.toLowerCase()
-    filteredLeads = filteredLeads.filter(lead => 
+    filteredLeads = filteredLeads.filter((lead: typeof Lead) => 
       lead.firstName.toLowerCase().includes(searchLower) ||
       lead.lastName.toLowerCase().includes(searchLower) ||
       lead.email.toLowerCase().includes(searchLower) ||
@@ -97,7 +81,7 @@ export async function GET(request: Request) {
   }
 
   if (status !== 'ALL') {
-    filteredLeads = filteredLeads.filter(lead => lead.status === status)
+    filteredLeads = filteredLeads.filter((lead: typeof Lead) => lead.status === status)
   }
 
   const PAGE_SIZE = 10
@@ -105,6 +89,9 @@ export async function GET(request: Request) {
   const totalPages = Math.ceil(totalLeads / PAGE_SIZE)
 
   const paginatedLeads = filteredLeads.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  console.log("Filtered leads:", filteredLeads.length);
+  console.log("Paginated leads:", paginatedLeads.length);
 
   return NextResponse.json({
     leads: paginatedLeads,
