@@ -2,14 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import * as z from 'zod'
-import { Button } from "@/components/ui/button"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Form, FormControl, FormField, FormItem } from "@/components/ui/form"
+import { Button } from "@/components/ui/button"
+import React from 'react'
 
 interface Lead {
   id: string
@@ -17,64 +14,58 @@ interface Lead {
   lastName: string
   email: string
   countryOfCitizenship: string
+  visaCategories: string[]
   status: 'PENDING' | 'REACHED_OUT'
   submittedAt: string
 }
 
-const filterSchema = z.object({
-  search: z.string().optional(),
-  status: z.enum(['ALL', 'PENDING', 'REACHED_OUT']).optional(),
-})
-
 export default function InternalLeadsList() {
-  const router = useRouter()
   const [leads, setLeads] = useState<Lead[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [filteredLeads, setFilteredLeads] = useState<Lead[]>([])
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('ALL')
   const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-
-  const form = useForm<z.infer<typeof filterSchema>>({
-    resolver: zodResolver(filterSchema),
-    defaultValues: {
-      search: '',
-      status: 'ALL',
-    },
-  })
+  const leadsPerPage = 8
+  const router = useRouter()
 
   useEffect(() => {
     fetchLeads()
-  }, [currentPage])
+  }, [])
+
+  useEffect(() => {
+    filterLeads()
+  }, [leads, search, statusFilter])
 
   async function fetchLeads() {
-    setIsLoading(true)
-    const filters = form.getValues()
-    const searchParams = new URLSearchParams({
-      page: currentPage.toString(),
-      ...(filters.search && { search: filters.search }),
-      ...(filters.status && { status: filters.status }),
-    })
-
     try {
-      const response = await fetch(`/api/leads?${searchParams}`)
-      if (response.status === 401) {
-        router.push('/login')
-        return
+      const response = await fetch('/api/leads')
+      if (response.ok) {
+        const data = await response.json()
+        setLeads(data.leads)
+      } else {
+        console.error('Failed to fetch leads')
       }
-      if (!response.ok) {
-        throw new Error('Failed to fetch leads')
-      }
-      const data = await response.json()
-      setLeads(data.leads)
-      setTotalPages(data.totalPages)
-      setIsLoading(false)
     } catch (error) {
-      setError('Failed to fetch leads')
-      setIsLoading(false)
+      console.error('Error fetching leads:', error)
     }
   }
 
-  async function handleStatusChange(id: string, newStatus: 'PENDING' | 'REACHED_OUT') {
+  function filterLeads() {
+    let filtered = leads
+    if (search) {
+      filtered = filtered.filter(lead => 
+        `${lead.firstName} ${lead.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
+        lead.email.toLowerCase().includes(search.toLowerCase()) ||
+        lead.countryOfCitizenship.toLowerCase().includes(search.toLowerCase())
+      )
+    }
+    if (statusFilter !== 'ALL') {
+      filtered = filtered.filter(lead => lead.status === statusFilter)
+    }
+    setFilteredLeads(filtered)
+  }
+
+  async function updateLeadStatus(id: string, newStatus: 'PENDING' | 'REACHED_OUT') {
     try {
       const response = await fetch(`/api/leads/${id}`, {
         method: 'PATCH',
@@ -84,63 +75,47 @@ export default function InternalLeadsList() {
         body: JSON.stringify({ status: newStatus }),
       })
 
-      if (!response.ok) {
-        throw new Error('Failed to update lead status')
+      if (response.ok) {
+        const updatedLead = await response.json()
+        setLeads(prevLeads => prevLeads.map(lead => 
+          lead.id === id ? updatedLead : lead
+        ))
+      } else {
+        console.error('Failed to update lead status')
       }
-
-      fetchLeads()
     } catch (error) {
       console.error('Error updating lead status:', error)
     }
   }
 
-  function handleFilterSubmit(data: z.infer<typeof filterSchema>) {
-    setCurrentPage(1)
-    fetchLeads()
-  }
-
-  if (isLoading) return <div>Loading...</div>
-  if (error) return <div>Error: {error}</div>
+  const indexOfLastLead = currentPage * leadsPerPage
+  const indexOfFirstLead = indexOfLastLead - leadsPerPage
+  const currentLeads = filteredLeads.slice(indexOfFirstLead, indexOfLastLead)
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Internal Leads Management</h1>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleFilterSubmit)} className="flex gap-4 mb-4">
-          <FormField
-            control={form.control}
-            name="search"
-            render={({ field }) => (
-              <FormItem className="flex-grow">
-                <FormControl>
-                  <Input placeholder="Search" {...field} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="status"
-            render={({ field }) => (
-              <FormItem>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="ALL">All</SelectItem>
-                    <SelectItem value="PENDING">Pending</SelectItem>
-                    <SelectItem value="REACHED_OUT">Reached Out</SelectItem>
-                  </SelectContent>
-                </Select>
-              </FormItem>
-            )}
-          />
-          <Button type="submit">Filter</Button>
-        </form>
-      </Form>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Leads</h1>
+        <Button onClick={() => router.push('/submit-lead')}>Submit New Lead</Button>
+      </div>
+      <div className="flex items-center space-x-2 mb-4">
+        <Input
+          placeholder="Search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-sm"
+        />
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All</SelectItem>
+            <SelectItem value="PENDING">Pending</SelectItem>
+            <SelectItem value="REACHED_OUT">Reached Out</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
       <Table>
         <TableHeader>
           <TableRow>
@@ -148,38 +123,47 @@ export default function InternalLeadsList() {
             <TableHead>Submitted</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Country</TableHead>
-            <TableHead>Action</TableHead>
+            <TableHead>Visa Categories</TableHead>
+            <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {leads.map((lead) => (
+          {currentLeads.map((lead) => (
             <TableRow key={lead.id}>
               <TableCell>{`${lead.firstName} ${lead.lastName}`}</TableCell>
               <TableCell>{new Date(lead.submittedAt).toLocaleString()}</TableCell>
               <TableCell>{lead.status}</TableCell>
               <TableCell>{lead.countryOfCitizenship}</TableCell>
+              <TableCell>{lead.visaCategories.join(', ')}</TableCell>
               <TableCell>
-                {lead.status === 'PENDING' && (
-                  <Button onClick={() => handleStatusChange(lead.id, 'REACHED_OUT')}>
-                    Mark as Reached Out
-                  </Button>
-                )}
+                <Button 
+                  onClick={() => updateLeadStatus(lead.id, 'PENDING')} 
+                  disabled={lead.status === 'PENDING'}
+                  className="mr-2"
+                >
+                  Mark Pending
+                </Button>
+                <Button 
+                  onClick={() => updateLeadStatus(lead.id, 'REACHED_OUT')} 
+                  disabled={lead.status === 'REACHED_OUT'}
+                >
+                  Mark Reached Out
+                </Button>
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-      <div className="flex justify-between items-center mt-4">
+      <div className="flex justify-end space-x-2 mt-4">
         <Button 
-          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
           disabled={currentPage === 1}
         >
           Previous
         </Button>
-        <span>Page {currentPage} of {totalPages}</span>
         <Button 
-          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-          disabled={currentPage === totalPages}
+          onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredLeads.length / leadsPerPage)))}
+          disabled={currentPage === Math.ceil(filteredLeads.length / leadsPerPage)}
         >
           Next
         </Button>

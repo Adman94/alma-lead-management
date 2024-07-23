@@ -1,5 +1,8 @@
+// app/api/leads/route.ts
+
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { addLead, getLeads, Lead } from '@/lib/leadsStore'
 
 const leadSchema = z.object({
   firstName: z.string().min(2),
@@ -9,11 +12,62 @@ const leadSchema = z.object({
   linkedinUrl: z.string().url().optional().or(z.literal('')),
   visaCategories: z.array(z.string()),
   helpDescription: z.string().min(10),
+  // resume is handled separately
 })
 
-export let leads: z.infer<typeof leadSchema>[] = []
+export async function POST(request: Request) {
+  console.log("Received POST request to /api/leads");
 
-const PAGE_SIZE = 10
+  try {
+    const formData = await request.formData();
+    console.log("FormData received:", Object.fromEntries(formData));
+
+    const body: Record<string, FormDataEntryValue> = Object.fromEntries(formData);
+
+    // Handle resume file
+    const resumeFile = body.resume as Blob | null;
+    const resumeFilename = resumeFile ? (resumeFile as any).name : null;
+
+    // Parse visaCategories from JSON string
+    const visaCategoriesString = body.visaCategories as string;
+    console.log("visaCategoriesString:", visaCategoriesString);
+    const visaCategories = JSON.parse(visaCategoriesString);
+    console.log("Parsed visaCategories:", visaCategories);
+
+    const dataToValidate = {
+      ...body,
+      visaCategories,
+    };
+    console.log("Data to validate:", dataToValidate);
+
+    const validatedData = leadSchema.parse(dataToValidate);
+    console.log("Validated data:", validatedData);
+
+    const newLead: Lead = {
+      ...validatedData,
+      id: Date.now().toString(),
+      status: 'PENDING',
+      submittedAt: new Date().toISOString(),
+      resumeFilename
+    };
+
+    addLead(newLead);
+
+    console.log("New lead added:", newLead);
+
+    return NextResponse.json({ message: 'Lead created successfully', lead: newLead }, { status: 201 })
+  } catch (error) {
+    console.error("Error processing lead submission:", error);
+    if (error instanceof z.ZodError) {
+      console.error("Zod validation error:", error.errors);
+      return NextResponse.json({ errors: error.errors }, { status: 400 })
+    }
+    if (error instanceof Error) {
+      console.error("Error details:", error.message, error.stack);
+    }
+    return NextResponse.json({ error: 'An unexpected error occurred', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 })
+  }
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -21,7 +75,7 @@ export async function GET(request: Request) {
   const search = searchParams.get('search') || ''
   const status = searchParams.get('status') || 'ALL'
 
-  let filteredLeads = leads
+  let filteredLeads = getLeads()
 
   if (search) {
     const searchLower = search.toLowerCase()
@@ -37,6 +91,7 @@ export async function GET(request: Request) {
     filteredLeads = filteredLeads.filter(lead => lead.status === status)
   }
 
+  const PAGE_SIZE = 10
   const totalLeads = filteredLeads.length
   const totalPages = Math.ceil(totalLeads / PAGE_SIZE)
 
@@ -48,26 +103,4 @@ export async function GET(request: Request) {
     totalPages,
     totalLeads
   })
-}
-
-export async function POST(request: Request) {
-  const body = await request.json()
-
-  try {
-    const lead = leadSchema.parse(body)
-    
-    leads.push({
-      ...lead,
-      id: Date.now().toString(),
-      status: 'PENDING',
-      submittedAt: new Date().toISOString(),
-    })
-
-    return NextResponse.json({ message: 'Lead created successfully' }, { status: 201 })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ errors: error.errors }, { status: 400 })
-    }
-    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 })
-  }
 }

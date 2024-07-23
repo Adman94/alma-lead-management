@@ -35,16 +35,12 @@ export default function LoginPage() {
         body: JSON.stringify(values),
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success) {
-          console.log('Login successful, redirecting to /internal...')
-          router.push('/internal')
-        } else {
-          setError('Login failed. Please try again.')
-        }
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        router.push('/submit-lead')
       } else {
-        setError('Invalid credentials')
+        setError(data.message || 'Invalid credentials')
       }
     } catch (error) {
       console.error('Login error:', error)
@@ -53,10 +49,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex justify-center items-center min-h-screen">
-      <div className="w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-4">Login</h1>
-        {error && <div className="text-red-500 mb-4">{error}</div>}
+    <div className="flex justify-center items-center min-h-screen bg-gray-100">
+      <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-md">
+        <h1 className="text-2xl font-bold mb-6 text-center">Login to Alma</h1>
+        {error && <div className="text-red-500 mb-4 text-center">{error}</div>}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
