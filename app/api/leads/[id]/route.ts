@@ -1,8 +1,8 @@
+// app/api/leads/[id]/route.ts
+
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-
-// This should be replaced with a database query in a real application
-import { leads } from '../route'
+import { updateLead } from '@/lib/leadsStore'
 
 const updateSchema = z.object({
   status: z.enum(['PENDING', 'REACHED_OUT']),
@@ -12,21 +12,20 @@ export async function PATCH(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const id = params.id
-  const body = await request.json()
-
   try {
+    const id = params.id
+    const body = await request.json()
+
     const { status } = updateSchema.parse(body)
     
-    const leadIndex = leads.findIndex(lead => lead.id === id)
-    if (leadIndex === -1) {
+    const updatedLead = updateLead(id, { status })
+    if (!updatedLead) {
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
     }
 
-    leads[leadIndex] = { ...leads[leadIndex], status }
-
-    return NextResponse.json(leads[leadIndex])
+    return NextResponse.json(updatedLead)
   } catch (error) {
+    console.error("Error updating lead status:", error)
     if (error instanceof z.ZodError) {
       return NextResponse.json({ errors: error.errors }, { status: 400 })
     }

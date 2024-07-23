@@ -1,9 +1,5 @@
-import PublicLeadForm from '@/components/PublicLeadForm'
+import { redirect } from 'next/navigation'
 
 export default function Home() {
-  return (
-    <main className="container mx-auto p-4">
-      <PublicLeadForm />
-    </main>
-  )
+  redirect('/login')
 }
