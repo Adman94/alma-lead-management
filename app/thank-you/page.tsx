@@ -19,8 +19,8 @@ export default function ThankYouPage() {
     <div className="flex justify-center items-center min-h-screen bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-md text-center">
         <h1 className="text-2xl font-bold mb-4">Thank You!</h1>
-        <p>Your lead has been successfully submitted.</p>
-        <p>You will be redirected to the leads list shortly...</p>
+        <p>Your information was submitted to our team of immigration attorneys.</p>
+        <p>Expect an email from hello@tryalma.ai</p>
       </div>
     </div>
   )

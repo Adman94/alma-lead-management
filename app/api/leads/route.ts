@@ -4,6 +4,15 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { addLead, getLeads, Lead } from '@/lib/leadsStore'
 
+type Lead = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  status: string;
+  submittedAt: string;
+  resumeFilename: File;
+}
+
 const leadSchema = z.object({
   firstName: z.string().min(2),
   lastName: z.string().min(2),

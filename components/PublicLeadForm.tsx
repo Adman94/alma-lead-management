@@ -137,9 +137,9 @@ export default function PublicLeadForm() {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="usa">United States</SelectItem>
-                  <SelectItem value="canada">Canada</SelectItem>
-                  <SelectItem value="mexico">Mexico</SelectItem>
+                  <SelectItem value="United States">United States</SelectItem>
+                  <SelectItem value="Canada">Canada</SelectItem>
+                  <SelectItem value="Mexico">Mexico</SelectItem>
                   {/* Add more countries as needed */}
                 </SelectContent>
               </Select>
@@ -165,9 +165,9 @@ export default function PublicLeadForm() {
           name="visaCategories"
           render={() => (
             <FormItem>
-              <FormLabel>Visa Categories</FormLabel>
+              <FormLabel>Visa Categories of interest?</FormLabel>
               <div className="space-y-2">
-                {['O-1', 'EB-1A', 'EB-2 NIW'].map((category) => (
+                {['O-1', 'EB-1A', 'EB-2 NIW', 'I don\'t know'].map((category) => (
                   <FormField
                     key={category}
                     control={form.control}
@@ -210,7 +210,7 @@ export default function PublicLeadForm() {
               <FormLabel>How can we help you?</FormLabel>
               <FormControl>
                 <Textarea 
-                  placeholder="Please describe your current situation, goals, and any questions you have about the visa process." 
+                  placeholder="What is your current status and when does it expire? What is your past immigration history? Are you looking for long-term permanent residency or short-term employment visa or both? Are there any timeline considerations?" 
                   {...field}
                 />
               </FormControl>

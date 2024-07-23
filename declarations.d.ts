@@ -1,0 +1,11 @@
+declare module '@/components/PublicLeadForm';
+declare module '@/components/ui/button';
+declare module '@/lib/leadsStore';
+declare module '@/components/InternalLeadsList';
+declare module '@/components/ui/form';
+declare module '@/components/ui/input';
+declare module '@/components/ui/select';
+declare module '@/components/ui/checkbox';
+declare module '@/components/ui/textarea';
+declare module '@/components/ui/table';
+declare module 'react-redux';
