@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     reactStrictMode: true,
-};
-
-export default nextConfig;
+    transpilePackages: ['@jsonforms/react', '@jsonforms/material-renderers', '@material-ui/core'],
+  }
+  
+  export default nextConfig;

@@ -1,79 +1,116 @@
 'use client'
 
-import { ChangeEvent, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm, ControllerRenderProps } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
+import { JsonForms } from '@jsonforms/react'
+import { materialRenderers, materialCells } from '@jsonforms/material-renderers'
 import { Button } from "@/components/ui/button"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Textarea } from "@/components/ui/textarea"
-import React from 'react'
 
-const formSchema = z.object({
-  firstName: z.string().min(2, "First name must be at least 2 characters."),
-  lastName: z.string().min(2, "Last name must be at least 2 characters."),
-  email: z.string().email("Invalid email address."),
-  countryOfCitizenship: z.string().min(1, "Country of citizenship is required."),
-  linkedinUrl: z.string().url("Invalid LinkedIn URL.").optional().or(z.literal('')),
-  visaCategories: z.array(z.string()).min(1, "Please select at least one visa category."),
-  helpDescription: z.string().min(10, "Please provide more information (at least 10 characters)."),
-  resume: z.any().optional(),
-})
+const schema = {
+  type: 'object',
+  properties: {
+    firstName: { type: 'string', minLength: 2 },
+    lastName: { type: 'string', minLength: 2 },
+    email: { type: 'string', format: 'email' },
+    countryOfCitizenship: { type: 'string' },
+    linkedinUrl: { type: 'string', format: 'uri' },
+    visaCategories: { 
+      type: 'array',
+      items: { type: 'string', enum: ['O-1', 'EB-1A', 'EB-2 NIW'] },
+      uniqueItems: true
+    },
+    helpDescription: { type: 'string', minLength: 10 },
+    resume: { type: 'string', format: 'data-url' }
+  },
+  required: ['firstName', 'lastName', 'email', 'countryOfCitizenship', 'visaCategories', 'helpDescription']
+}
 
-type FormValues = z.infer<typeof formSchema>;
+const uischema = {
+  type: 'VerticalLayout',
+  elements: [
+    {
+      type: 'Control',
+      scope: '#/properties/firstName',
+      label: 'First Name'
+    },
+    {
+      type: 'Control',
+      scope: '#/properties/lastName',
+      label: 'Last Name'
+    },
+    {
+      type: 'Control',
+      scope: '#/properties/email',
+      label: 'Email'
+    },
+    {
+      type: 'Control',
+      scope: '#/properties/countryOfCitizenship',
+      label: 'Country of Citizenship'
+    },
+    {
+      type: 'Control',
+      scope: '#/properties/linkedinUrl',
+      label: 'LinkedIn URL (Optional)'
+    },
+    {
+      type: 'Control',
+      scope: '#/properties/visaCategories',
+      label: 'Visa Categories',
+      options: {
+        format: 'checkbox'
+      }
+    },
+    {
+      type: 'Control',
+      scope: '#/properties/helpDescription',
+      label: 'How can we help you?',
+      options: {
+        multi: true
+      }
+    },
+    {
+      type: 'Control',
+      scope: '#/properties/resume',
+      label: 'Resume (Optional)',
+      options: {
+        accept: '.pdf,.doc,.docx'
+      }
+    }
+  ]
+}
 
 export default function PublicLeadForm() {
+  const [formData, setFormData] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      firstName: "",
-      lastName: "",
-      email: "",
-      countryOfCitizenship: "",
-      linkedinUrl: "",
-      visaCategories: [],
-      helpDescription: "",
-    },
-  })
-
-  async function onSubmit(values: FormValues) {
-    console.log("Form submitted with values:", values)
+  async function onSubmit() {
     setIsSubmitting(true)
     try {
-      const formData = new FormData()
-      Object.entries(values).forEach(([key, value]) => {
-        if (key === 'resume' && value instanceof FileList && value.length > 0) {
-          formData.append(key, value[0])
+      const formDataToSend = new FormData()
+      Object.entries(formData).forEach(([key, value]) => {
+        if (key === 'resume' && value) {
+          // Assuming the value is a data URL
+          const blob = dataURItoBlob(value)
+          formDataToSend.append(key, blob, 'resume.pdf') // Adjust filename as needed
         } else if (key === 'visaCategories') {
-          formData.append(key, JSON.stringify(value))
+          formDataToSend.append(key, JSON.stringify(value))
         } else if (value !== undefined && value !== null) {
-          formData.append(key, value as string)
+          formDataToSend.append(key, value as string)
         }
       })
 
-      console.log("FormData prepared:", Object.fromEntries(formData))
-
       const response = await fetch('/api/leads', {
         method: 'POST',
-        body: formData,
+        body: formDataToSend,
       })
-
-      console.log("Response status:", response.status)
-      const responseData = await response.json()
-      console.log("Response data:", responseData)
 
       if (response.ok) {
         console.log("Lead submitted successfully")
         router.push('/thank-you')
       } else {
-        console.error('Failed to submit lead:', responseData)
+        console.error('Failed to submit lead:', await response.json())
         // Handle error (e.g., show error message to user)
       }
     } catch (error) {
@@ -84,171 +121,36 @@ export default function PublicLeadForm() {
     }
   }
 
+  // Helper function to convert data URI to Blob
+  function dataURItoBlob(dataURI: string) {
+    const byteString = atob(dataURI.split(',')[1])
+    const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0]
+    const ab = new ArrayBuffer(byteString.length)
+    const ia = new Uint8Array(ab)
+    for (let i = 0; i < byteString.length; i++) {
+      ia[i] = byteString.charCodeAt(i)
+    }
+    return new Blob([ab], { type: mimeString })
+  }
+
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <FormField
-          control={form.control}
-          name="firstName"
-          render={({ field }: { field: ControllerRenderProps<FormValues, 'firstName'> }) => (
-            <FormItem>
-              <FormLabel>First Name</FormLabel>
-              <FormControl>
-                <Input placeholder="John" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="lastName"
-          render={({ field }: { field: ControllerRenderProps<FormValues, 'lastName'> }) => (
-            <FormItem>
-              <FormLabel>Last Name</FormLabel>
-              <FormControl>
-                <Input placeholder="Doe" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }: { field: ControllerRenderProps<FormValues, 'email'> }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input placeholder="johndoe@example.com" type="email" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="countryOfCitizenship"
-          render={({ field }: { field: ControllerRenderProps<FormValues, 'countryOfCitizenship'> }) => (
-            <FormItem>
-              <FormLabel>Country of Citizenship</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a country" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="United States">United States</SelectItem>
-                  <SelectItem value="Canada">Canada</SelectItem>
-                  <SelectItem value="Mexico">Mexico</SelectItem>
-                  <SelectItem value="Argentina">Argentina</SelectItem>
-                  <SelectItem value="South Korea">South Korea</SelectItem>
-                  <SelectItem value="India">India</SelectItem>
-                  <SelectItem value="France">France</SelectItem>
-                  <SelectItem value="Russia">Russia</SelectItem>
-                  <SelectItem value="United Kingdom">United Kingdom</SelectItem>
-                  <SelectItem value="Australia">Australia</SelectItem>
-                  {/* Add more countries as needed */}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="linkedinUrl"
-          render={({ field }: { field: ControllerRenderProps<FormValues, 'linkedinUrl'> }) => (
-            <FormItem>
-              <FormLabel>LinkedIn URL (Optional)</FormLabel>
-              <FormControl>
-                <Input placeholder="https://www.linkedin.com/in/johndoe" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="visaCategories"
-          render={() => (
-            <FormItem>
-              <FormLabel>Visa Categories</FormLabel>
-              <div className="space-y-2">
-                {['O-1', 'EB-1A', 'EB-2 NIW', 'I don\'t know'].map((category) => (
-                  <FormField
-                    key={category}
-                    control={form.control}
-                    name="visaCategories"
-                    render={({ field }: { field: ControllerRenderProps<FormValues, 'visaCategories'> }) => {
-                      return (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value?.includes(category)}
-                              onCheckedChange={(checked: boolean) => {
-                                return checked
-                                  ? field.onChange([...field.value, category])
-                                  : field.onChange(
-                                      field.value?.filter(
-                                        (value) => value !== category
-                                      )
-                                    )
-                              }}
-                            />
-                          </FormControl>
-                          <FormLabel className="font-normal">
-                            {category}
-                          </FormLabel>
-                        </FormItem>
-                      )
-                    }}
-                  />
-                ))}
-              </div>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="helpDescription"
-          render={({ field }: { field: ControllerRenderProps<FormValues, 'helpDescription'> }) => (
-            <FormItem>
-              <FormLabel>How can we help you?</FormLabel>
-              <FormControl>
-                <Textarea 
-                  placeholder="What is your current status and when does it expire? What is your past immigration history? Are you looking for long-term permanent residency or short-term employment visa or both? Are there any timeline considerations?" 
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="resume"
-          render={({ field }: { field: ControllerRenderProps<FormValues, 'resume'> }) => (
-            <FormItem>
-              <FormLabel>Resume (Optional)</FormLabel>
-              <FormControl>
-                <Input 
-                  type="file" 
-                  accept=".pdf,.doc,.docx" 
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => field.onChange(e.target.files)}
-                />
-              </FormControl>
-              <FormDescription>Upload your resume (PDF, DOC, or DOCX format, max 5MB)</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Submitting...' : 'Submit'}
-        </Button>
-      </form>
-    </Form>
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-6">Submit Lead</h1>
+      <JsonForms
+        schema={schema}
+        uischema={uischema}
+        data={formData}
+        renderers={materialRenderers}
+        cells={materialCells}
+        onChange={({ data }) => setFormData(data)}
+      />
+      <Button 
+        onClick={onSubmit} 
+        disabled={isSubmitting} 
+        className="mt-4"
+      >
+        {isSubmitting ? 'Submitting...' : 'Submit'}
+      </Button>
+    </div>
   )
 }
