@@ -2,16 +2,20 @@
 
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
+// lib/redux/leadSlice.ts
 interface Lead {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
-  linkedin: string;
-  visas: string;
-  resume: string;
-  openInput: string;
+  linkedinUrl?: string;
+  googleScholarUrl?: string;
+  visaCategories: string[];
+  helpDescription: string;
   status: 'PENDING' | 'REACHED_OUT';
+  submittedAt: string;
+  updatedAt?: string;
+  resumeFilename?: string | null;
 }
 
 interface LeadState {

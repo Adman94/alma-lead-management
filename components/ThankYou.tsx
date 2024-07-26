@@ -1,15 +1,36 @@
+'use client'
+
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
-import Link from 'next/link'
-import React from "react"
+import Image from 'next/image'
+import styles from './ThankYou.module.css'
 
 export default function ThankYouPage() {
+  const router = useRouter()
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      router.push('/internal/leads')
+    }, 3000) // Redirect after 3 seconds
+
+    return () => clearTimeout(timer)
+  }, [router])
+
   return (
-    <div className="max-w-2xl mx-auto text-center">
-      <h1 className="text-3xl font-bold mb-6">Thank You</h1>
-      <p className="mb-6">Your information was submitted to our team of immigration attorneys. Expect an email from hello@tryalma.ai.</p>
-      <Link href="/">
-        <Button>Go Back to Homepage</Button>
-      </Link>
+    <div className={styles.container}>
+      <Image src="/uploads/file-info.png" alt="Document Icon" width={48} height={48} />
+      <h1 className={styles.title}>Thank You</h1>
+      <p className={styles.message}>
+        Your information was submitted to our team of immigration attorneys. 
+        Expect an email from hello@tryalma.ai.
+      </p>
+      <Button 
+        onClick={() => router.push('/')} 
+        className={styles.button}
+      >
+        Go Back to Homepage
+      </Button>
     </div>
   )
 }

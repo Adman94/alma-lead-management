@@ -1,60 +1,59 @@
-'use client'
+'use client';
 
-import { useEffect, useState, ChangeEvent } from 'react'
-import { useRouter } from 'next/navigation'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
-import type { Lead } from '@/lib/leadsStore'
-import React from 'react'
+import { useEffect, useState, ChangeEvent } from 'react';
+import { useRouter } from 'next/navigation';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import type { Lead } from '@/lib/leadsStore';
 
 export default function InternalLeadsList() {
-  const [leads, setLeads] = useState<typeof Lead[]>([])
-  const [filteredLeads, setFilteredLeads] = useState<typeof Lead[]>([])
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('ALL')
-  const [currentPage, setCurrentPage] = useState(1)
-  const leadsPerPage = 8
-  const router = useRouter()
+  const [leads, setLeads] = useState<typeof Lead[]>([]);
+  const [filteredLeads, setFilteredLeads] = useState<typeof Lead[]>([]);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const leadsPerPage = 8;
+  const router = useRouter();
 
   useEffect(() => {
-    fetchLeads()
-  }, [])
+    fetchLeads();
+  }, []);
 
   useEffect(() => {
-    filterLeads()
-  }, [leads, search, statusFilter])
+    filterLeads();
+  }, [leads, search, statusFilter]);
 
   async function fetchLeads() {
     try {
-      const response = await fetch('/api/leads')
+      const response = await fetch('/api/leads');
       if (response.ok) {
-        const data = await response.json()
-        setLeads(data.leads)
+        const data = await response.json();
+        setLeads(data.leads);
       } else {
-        console.error('Failed to fetch leads')
+        console.error('Failed to fetch leads');
       }
     } catch (error) {
-      console.error('Error fetching leads:', error)
+      console.error('Error fetching leads:', error);
     }
   }
 
   function filterLeads() {
-    let filtered = leads
+    let filtered = leads;
     if (search) {
-      const searchLower = search.toLowerCase()
-      filtered = filtered.filter((lead: typeof Lead) => 
+      const searchLower = search.toLowerCase();
+      filtered = filtered.filter(lead =>
         lead.firstName.toLowerCase().includes(searchLower) ||
         lead.lastName.toLowerCase().includes(searchLower) ||
         lead.email.toLowerCase().includes(searchLower) ||
         lead.countryOfCitizenship.toLowerCase().includes(searchLower)
-      )
+      );
     }
     if (statusFilter !== 'ALL') {
-      filtered = filtered.filter((lead: typeof Lead) => lead.status === statusFilter)
+      filtered = filtered.filter(lead => lead.status === statusFilter);
     }
-    setFilteredLeads(filtered)
+    setFilteredLeads(filtered);
   }
 
   async function updateLeadStatus(id: string, newStatus: 'PENDING' | 'REACHED_OUT') {
@@ -62,24 +61,24 @@ export default function InternalLeadsList() {
       const response = await fetch(`/api/leads/${id}`, {
         method: 'PATCH',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ status: newStatus }),
-      })
+        body: JSON.stringify({ status: newStatus })
+      });
 
       if (response.ok) {
-        fetchLeads()
+        fetchLeads();
       } else {
-        console.error('Failed to update lead status')
+        console.error('Failed to update lead status');
       }
     } catch (error) {
-      console.error('Error updating lead status:', error)
+      console.error('Error updating lead status:', error);
     }
   }
 
-  const indexOfLastLead = currentPage * leadsPerPage
-  const indexOfFirstLead = indexOfLastLead - leadsPerPage
-  const currentLeads = filteredLeads.slice(indexOfFirstLead, indexOfLastLead)
+  const indexOfLastLead = currentPage * leadsPerPage;
+  const indexOfFirstLead = indexOfLastLead - leadsPerPage;
+  const currentLeads = filteredLeads.slice(indexOfFirstLead, indexOfLastLead);
 
   return (
     <div className="container mx-auto p-4">
@@ -125,15 +124,15 @@ export default function InternalLeadsList() {
               <TableCell>{lead.countryOfCitizenship}</TableCell>
               <TableCell>{lead.visaCategories.join(', ')}</TableCell>
               <TableCell>
-                <Button 
-                  onClick={() => updateLeadStatus(lead.id, 'PENDING')} 
+                <Button
+                  onClick={() => updateLeadStatus(lead.id, 'PENDING')}
                   disabled={lead.status === 'PENDING'}
                   className="mr-2"
                 >
                   Mark Pending
                 </Button>
-                <Button 
-                  onClick={() => updateLeadStatus(lead.id, 'REACHED_OUT')} 
+                <Button
+                  onClick={() => updateLeadStatus(lead.id, 'REACHED_OUT')}
                   disabled={lead.status === 'REACHED_OUT'}
                 >
                   Mark Reached Out
@@ -144,13 +143,13 @@ export default function InternalLeadsList() {
         </TableBody>
       </Table>
       <div className="flex justify-end space-x-2 mt-4">
-        <Button 
-          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
+        <Button
+          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
           disabled={currentPage === 1}
         >
           Previous
         </Button>
-        <Button 
+        <Button
           onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredLeads.length / leadsPerPage)))}
           disabled={currentPage === Math.ceil(filteredLeads.length / leadsPerPage)}
         >
@@ -158,5 +157,5 @@ export default function InternalLeadsList() {
         </Button>
       </div>
     </div>
-  )
+  );
 }

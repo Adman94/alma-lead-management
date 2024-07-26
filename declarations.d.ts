@@ -9,3 +9,4 @@ declare module '@/components/ui/checkbox';
 declare module '@/components/ui/textarea';
 declare module '@/components/ui/table';
 declare module 'react-redux';
+declare module '@/utils/countries';
